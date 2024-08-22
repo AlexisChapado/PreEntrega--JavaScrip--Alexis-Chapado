@@ -1,0 +1,40 @@
+/*              RESET                                       */
+
+
+* {
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/*             FONDO Y TEXTO DE PARA ENTREGA                */
+main {
+    background-color: black;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+
+    justify-content: center;
+    align-items: center;
+}
+
+button {
+    width: 10rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+main h1 {
+    height: 20vh;
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    font-size: 7rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+}
