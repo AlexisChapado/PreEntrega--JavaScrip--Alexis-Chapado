@@ -1,84 +1,146 @@
-const productosDisponibles = [
-    {id: 1, nombre: "Fotografia por unidad", tipo: "fotografia", precio: 4000},
-    {id: 2, nombre: "Sesion de fotos, solo interiores", tipo: "sesion1", precio: 150000},
-    {id: 3, nombre: "Sesion de fotos, interior y exterior", tipo: "sesion2", precio: 250000}
-];
+document.addEventListener('DOMContentLoaded', () => {
+    const daysContainer = document.getElementById('days');
+    const monthYearDisplay = document.getElementById('month-year');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const taskForm = document.getElementById('task-form');
+    const taskDateInput = document.getElementById('task-date');
+    const taskInput = document.getElementById('task-input');
+    const addTaskBtn = document.getElementById('add-task');
+    const taskList = document.getElementById('task-list');
 
-let carrito = [];
+    let currentDate = new Date();
 
-function agregarAlCarrito() {
-    let mensaje = "Selecciona un producto:\n";
-    productosDisponibles.forEach(producto => {
-        mensaje += `${producto.id}. ${producto.nombre} - $${producto.precio}\n`;
+    // Inicializar calendario y lista de tareas
+    renderCalendar();
+    renderTaskList();
+
+    // Navegar por los meses
+    prevMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
     });
-    
-    let seleccion = parseInt(prompt(mensaje));
-    let producto = productosDisponibles.find(p => p.id === seleccion);
-    
-    if (producto) {
-        let cantidad = parseInt(prompt(`¿Cuántas unidades de "${producto.nombre}" quieres agregar?`));
-        let productoEnCarrito = carrito.find(p => p.id === producto.id);
-        
-        if (productoEnCarrito) {
-            productoEnCarrito.cantidad += cantidad;
-        } else {
-            carrito.push({...producto, cantidad: cantidad});
-        }
-        
-        alert(`Agregaste ${cantidad} "${producto.nombre}" al carrito.`);
-    } else {
-        alert("Producto no válido.");
-    }
-}
 
-function eliminarDelCarrito() {
-    if (carrito.length === 0) {
-        alert("El carrito está vacío.");
-        return;
-    }
-    
-    let mensaje = "Selecciona un producto para eliminar:\n";
-    carrito.forEach((producto, index) => {
-        mensaje += `${index + 1}. ${producto.nombre} - Cantidad: ${producto.cantidad}\n`;
+    nextMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
     });
-    
-    let seleccion = parseInt(prompt(mensaje));
-    if (seleccion > 0 && seleccion <= carrito.length) {
-        carrito.splice(seleccion - 1, 1);
-        alert("Producto eliminado del carrito.");
-    } else {
-        alert("Selección no válida.");
+
+    // Añadir tarea
+    addTaskBtn.addEventListener('click', () => {
+        const taskText = taskInput.value.trim();
+        const taskDate = taskDateInput.value;
+        if (taskText && taskDate) {
+            addTask(taskDate, taskText);
+            taskInput.value = '';
+            renderCalendar();
+            renderTaskList();
+        }
+    });
+
+    // Renderizar el calendario
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const firstDayOfWeek = firstDayOfMonth.getDay();
+        const daysInMonth = lastDayOfMonth.getDate();
+
+        monthYearDisplay.textContent = `${firstDayOfMonth.toLocaleString('default', { month: 'long' })} ${year}`;
+        daysContainer.innerHTML = '';
+
+        for (let i = 0; i < firstDayOfWeek; i++) {
+            daysContainer.innerHTML += `<div></div>`;
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const tasksForDay = getTasksForDate(dateString);
+            let tasksHtml = '';
+            tasksForDay.forEach((task, index) => {
+                tasksHtml += `<div class="task">${task} <button class="delete-task" data-date="${dateString}" data-index="${index}">X</button></div>`;
+            });
+
+            daysContainer.innerHTML += `<div data-date="${dateString}" class="day">${day}${tasksHtml}</div>`;
+        }
+
+        // Añadir evento para los botones de borrar tarea
+        document.querySelectorAll('.delete-task').forEach(button => {
+            button.addEventListener('click', deleteTask);
+        });
+
+        // Añadir evento para seleccionar una fecha del calendario
+        document.querySelectorAll('.day').forEach(day => {
+            day.addEventListener('click', () => {
+                selectDate(day.getAttribute('data-date'));
+            });
+        });
     }
-}
 
-function calcularTotal() {
-    let total = carrito.reduce((sum, producto) => sum + producto.precio * producto.cantidad, 0);
-    alert(`El total de tu carrito es: $${total}`);
-}
+    // Renderizar la lista de tareas
+    function renderTaskList() {
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || {};
+        taskList.innerHTML = '';
 
-function mostrarMenu() {
-    let salir = false;
-    while (!salir) {
-        let opcion = prompt("Seleccione una opción:\n1. Agregar producto\n2. Eliminar producto\n3. Ver total\n4. Salir");
-        
-        switch (opcion) {
-            case "1":
-                agregarAlCarrito();
-                break;
-            case "2":
-                eliminarDelCarrito();
-                break;
-            case "3":
-                calcularTotal();
-                break;
-            case "4":
-                salir = true;
-                alert("Gracias por su visita!.");
-                break;
-            default:
-                alert("Opción no válida.");
+        for (const date in storedTasks) {
+            storedTasks[date].forEach((task, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${task} (${date}) `;
+                const goToCalendarBtn = document.createElement('button');
+                goToCalendarBtn.textContent = 'Ir al calendario';
+                goToCalendarBtn.addEventListener('click', () => {
+                    jumpToDate(date);
+                });
+                li.appendChild(goToCalendarBtn);
+                taskList.appendChild(li);
+            });
         }
     }
-}
 
-mostrarMenu();
+    // Obtener tareas para una fecha
+    function getTasksForDate(date) {
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || {};
+        return storedTasks[date] || [];
+    }
+
+    // Añadir tarea a una fecha
+    function addTask(date, task) {
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || {};
+        if (!storedTasks[date]) {
+            storedTasks[date] = [];
+        }
+        storedTasks[date].push(task);
+        localStorage.setItem('tasks', JSON.stringify(storedTasks));
+    }
+
+    // Borrar tarea de una fecha
+    function deleteTask(event) {
+        const date = event.target.getAttribute('data-date');
+        const index = event.target.getAttribute('data-index');
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || {};
+
+        if (storedTasks[date]) {
+            storedTasks[date].splice(index, 1); // Eliminar tarea del array
+            if (storedTasks[date].length === 0) {
+                delete storedTasks[date]; // Eliminar la fecha si no tiene tareas
+            }
+            localStorage.setItem('tasks', JSON.stringify(storedTasks));
+            renderCalendar(); // Actualizar el calendario
+            renderTaskList(); // Actualizar la lista de tareas
+        }
+    }
+
+    // Saltar a una fecha en el calendario
+    function jumpToDate(date) {
+        const [year, month, day] = date.split('-').map(Number);
+        currentDate = new Date(year, month - 1, day);
+        renderCalendar();
+    }
+
+    // Seleccionar fecha al hacer clic en el calendario
+    function selectDate(date) {
+        taskDateInput.value = date;
+        taskInput.focus();
+    }
+});
